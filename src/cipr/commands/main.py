@@ -3,6 +3,7 @@ from os import path
 import sys
 
 def main():
-    sys.argv.extend(['-f', path.abspath(path.join(path.dirname(__file__), '__init__.py'))])
+    dir = path.join(path.abspath(path.dirname(__file__)), 'fabfile')
+    sys.argv.extend(['-f', dir])
     fab_main()
   
