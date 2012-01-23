@@ -145,6 +145,7 @@ def install(package):
     if package.startswith('git'):
         name = path.splitext(path.basename(package))[0]
     else:
+        package = path.abspath(package)
         name = path.basename(package)
         
     package_dir = path.join(env.package_dir, name)
@@ -166,12 +167,15 @@ def install(package):
             shutil.move(tmpdir, path.join(package_dir, name))
 
     elif path.exists(package):
-        # Local
+        # Local        
         os.symlink(package, package_dir)
 
     package = Package(package_dir)
-    for require in package.install_requires:
-        install(require)
+
+    if package.install_requires:
+        print('Installing dependancies...')
+        for require in package.install_requires:
+            install(require)
 
 @task
 def add(*names):
@@ -197,12 +201,15 @@ def add(*names):
             cfg.add_package(Package(dir))
 
 @task
-def list():
+def list(switches=''):
     """
     List installed packages
     """
     for name in os.listdir(env.package_dir):
-        print('- %s' % name)
+        if 'l' in switches:
+            print('- %s\t%s' % (name, env.package_dir))
+        else:
+            print('- %s' % name)
     
 @task
 def run():
@@ -248,3 +255,22 @@ def packageipa():
     local('cd "{dir}" && zip -r "{ipa_name}" "Payload/{filename}.app"'.format(dir=output_dir, ipa_name=ipa_name, filename=filename), capture=False)
     
     print('Packaged %s' % ipa_path)
+
+@task    
+def expanddotpaths():        
+    for filepath in os.listdir(path.join(env.dir)):
+        filename, ext = path.splitext(filepath)
+        if ext == '.lua' and '.' in filename:
+            paths, newfilename = filename.rsplit('.', 1)
+            newpath = paths.replace('.', '/')
+            newfilename = path.join(newpath, newfilename) + ext
+
+            print('Move %s to %s' % (filepath, newfilename))
+
+            fullpath = path.join(env.dir, newpath)
+            if not path.exists(fullpath):
+                os.makedirs(fullpath)
+
+            local(clom.git.mv(filepath, newfilename))
+
+

@@ -1,3 +1,4 @@
+-- Wrap json to limit scope of import
 local function load_json()
     require 'json'
     return json
@@ -13,12 +14,20 @@ local _G = _G
 
 local cipr = {}
 
+-- Replace require to load paths with a . as a directory
 local old_require = _G.require
-_G.require = function (path)
-    local path = path:gsub('%.', '/')
-    return old_require(path)
+local cipr_require = function (path)
+    local slashpath = path:gsub('%.', '/')
+    local mod = old_require(slashpath)
+
+    if slashpath ~= path then
+        -- Also store the package with the original path
+        package.loaded[path] = package.loaded[slashpath]
+    end
+
+    return mod
 end
-local require = _G.require
+_G.require = cipr_require
 
 cipr._packageDir = os.getenv('CIPR_PACKAGES')
 cipr._projectDir = os.getenv('CIPR_PROJECT')
@@ -46,7 +55,7 @@ end
 
 -- Import from installed package store
 function cipr.import(package_name)
-    return require(package_name)
+    return cipr_require(package_name)
 end
 
 
