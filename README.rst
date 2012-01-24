@@ -8,7 +8,7 @@ Cipr makes it easier to develop and manage packages for the
 Installation
 ============
 
-Cipr is a `Python <http://python.org/>`_. Currently Cipr only supports Mac OSX.
+Cipr is developed with `Python <http://python.org/>`_. Currently Cipr only supports Mac OSX.
 
 To install, use `pip install <http://pypi.python.org/pypi/pip>`_::
 
