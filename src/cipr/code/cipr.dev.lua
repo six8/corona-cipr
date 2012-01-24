@@ -33,7 +33,7 @@ cipr._packageDir = os.getenv('CIPR_PACKAGES')
 cipr._projectDir = os.getenv('CIPR_PROJECT')
 
 local ciprcfg
-local file = io.open(cipr._projectDir .. '/.ciprcfg', 'r')
+local file = io.open(cipr._projectDir .. '/.cipr/config', 'r')
 if file then
     local contents = file:read('*a')
     if contents and contents ~= '' then
@@ -41,7 +41,7 @@ if file then
     end
     io.close(file)
 else
-    error('Could not find .ciprcfg', 2)
+    error('Could not find .cipr/config', 2)
 end
 
 for i=1,#ciprcfg.packages do

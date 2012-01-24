@@ -5,7 +5,7 @@ def main():
         name = 'cipr',
         packages=['cipr'],
         package_dir = {'':'src'},
-        version = '0.7',
+        version = '0.8',
         author='Mike Thornton',
         author_email='six8@devdetails.com',
         download_url='http://github.com/six8/corona-cipr',
@@ -22,7 +22,7 @@ def main():
             "Natural Language :: English",
         ],
         install_requires = [
-            'Fabric',
+            'clik'
         ],
         long_description=open('README.rst').read(),
         entry_points = {

@@ -1,7 +1,7 @@
-from fabric.api import *
 import math
 import Image
 from os import path
+from cipr.commands import app
 
 def scale_and_fit(im, requested_size):
     im = im.copy()
@@ -53,7 +53,7 @@ icon_sizes = {
     'Icon-Small-50.png' : ('icon', 50, 50, scale_and_crop),
 }
 
-@task
+@app.command
 def makeicons(source):
     """
     Create all the neccessary icons from source image

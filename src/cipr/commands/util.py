@@ -2,44 +2,6 @@ from os import path
 import os
 import shutil
 from fnmatch import fnmatch
-
-def sync_dir_to(src_dir, dst_dir, exclude=None, include=None):
-    if not path.exists(dst_dir):
-        os.makedirs(dst_dir)
-
-    files = []
-    for filename in os.listdir(src_dir):
-        src = path.join(src_dir, filename)
-        dst = path.join(dst_dir, filename)
-        
-        skip = False
-        if exclude:
-            for p in exclude:
-                if fnmatch(filename, p):
-                    skip = True
-                    break
-
-        if skip:
-            continue
-                
-        if not path.isdir(src) and include:
-            skip = True
-            for p in include:
-                if fnmatch(filename, p):
-                    skip = False
-                    break
-            
-        if skip:
-            continue
-
-        if path.isdir(src):
-            sync_dir_to(src, dst, exclude=exclude, include=include)
-        else:
-            shutil.copy2(src, dst)
-
-        files.append(filename)
-
-    return files
     
 def _get_file_list(root, child, exclude, include):    
     src_dir = root
@@ -84,6 +46,21 @@ def _get_file_list(root, child, exclude, include):
 def get_file_list(root, exclude=None, include=None):
     return _get_file_list(root, child=None, exclude=exclude, include=include)
     
+def sync_dir_to(src_dir, dst_dir, exclude=None, include=None, ignore_existing=False):
+    if not path.exists(dst_dir):
+        os.makedirs(dst_dir)
+
+    files_to_copy = get_file_list(src_dir, exclude=exclude, include=include)
+    for filename in files_to_copy:
+        src = path.join(src_dir, filename)
+        dst = path.join(dst_dir, filename)
+                
+        if ignore_existing and path.exists(dst):
+            continue
+        else:
+            yield (filename, dst)
+            shutil.copy2(src, dst)
+
 def sync_lua_dir_to(src_dir, dst_dir, exclude=None, include=None):
     if not path.exists(dst_dir):
         os.makedirs(dst_dir)
@@ -103,4 +80,7 @@ def sync_lua_dir_to(src_dir, dst_dir, exclude=None, include=None):
         
         src = path.join(src_dir, filename)
         dst = path.join(dst_dir, distname)
+
+        yield (filename, dst)
+        
         shutil.copy2(src, dst)
