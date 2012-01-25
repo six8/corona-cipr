@@ -190,7 +190,10 @@ def build(env, ciprcfg, console):
         
     os.makedirs(env.build_dir)
         
-    for src, dst in util.sync_dir_to(env.project_directory, env.build_dir, exclude=['.cipr', '.git']):
+    if not path.exists(env.dist_dir):
+        os.makedirs(env.dist_dir)
+
+    for src, dst in util.sync_dir_to(env.project_directory, env.build_dir, exclude=['.cipr', '.git', 'build', 'dist']):
         console.quiet('  %s -> %s' % (src, dst))
     
     for package in ciprcfg.packages.keys():
@@ -203,6 +206,8 @@ def build(env, ciprcfg, console):
         
     cmd = AND(clom.cd(env.build_dir), clom['/Applications/CoronaSDK/Corona Terminal'](env.build_dir))
 
+    console.normal('Be sure to output your app to %s' % env.dist_dir)
+    
     try:
         cmd.shell.execute()
     except KeyboardInterrupt:
