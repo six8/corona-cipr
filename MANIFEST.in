@@ -1,4 +1,6 @@
 include README.rst
 include VERSION.txt
 include LICENSE
-recursive-include
+recursive-include src/cipr/code *
+recursive-include src/cipr/skel *
+recursive-include src/cipr/commands *.py
