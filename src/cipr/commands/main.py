@@ -1,4 +1,4 @@
-from cipr.commands import app, core, image
+from cipr.commands import app, core
 
 def main():
     app.command.main()

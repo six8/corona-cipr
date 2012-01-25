@@ -1,10 +1,16 @@
 from distutils.core import setup
 
+
 def main():
     setup(
         name = 'cipr',
         packages=['cipr', 'cipr.commands'],
         package_dir = {'':'src'},
+        package_data={'cipr': [
+            'code/*', 
+            'skel/default/*'
+        ]},
+        zip_safe = False,
         version = open('VERSION.txt').read().strip(),
         author='Mike Thornton',
         author_email='six8@devdetails.com',
@@ -23,7 +29,8 @@ def main():
             "Natural Language :: English",
         ],
         install_requires = [
-            'clik'
+            'clik',
+            'clom'
         ],
         long_description=open('README.rst').read(),
         entry_points = {
