@@ -3,7 +3,7 @@ from distutils.core import setup
 def main():
     setup(
         name = 'cipr',
-        packages=['cipr'],
+        packages=['cipr', 'cipr.commands'],
         package_dir = {'':'src'},
         version = open('VERSION.txt').read().strip(),
         author='Mike Thornton',
