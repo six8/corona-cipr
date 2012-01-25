@@ -8,6 +8,7 @@ def main():
         version = open('VERSION.txt').read().strip(),
         author='Mike Thornton',
         author_email='six8@devdetails.com',
+        url='http://github.com/six8/corona-cipr',
         download_url='http://github.com/six8/corona-cipr',
         keywords=['corona'],
         license='MIT',
