@@ -1,11 +1,11 @@
-from setuptools import setup, find_packages
+from distutils.core import setup
 
 def main():
     setup(
         name = 'cipr',
         packages=['cipr'],
         package_dir = {'':'src'},
-        version = '0.8',
+        version = open('VERSION.txt').read().strip(),
         author='Mike Thornton',
         author_email='six8@devdetails.com',
         download_url='http://github.com/six8/corona-cipr',
