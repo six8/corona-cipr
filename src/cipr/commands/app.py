@@ -19,7 +19,7 @@ def _args(opts):
 
     return dict(
         env = env,
-        ciprcfg = CiprCfg(path.join(env.project_directory, '.cipr/config'))
+        ciprcfg = CiprCfg(path.join(env.project_directory, '.ciprcfg'))
     )
 
 command = clik.App('cipr',

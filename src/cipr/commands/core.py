@@ -41,26 +41,26 @@ def update(env):
             os.remove(filename)
     app.command.run(['init', env.project_directory])
 
-@app.command
-def uninstall(args, env, console):
+@app.command(usage='[options] PACKAGE [PACKAGE...]')
+def uninstall(args, env, console, ciprcfg):
     """
     Remove a package
     """
-    assert len(args) == 1
-    name = args[0]
-    package_dir = path.join(env.package_dir, name)
-    if path.exists(package_dir):
-        console.quiet('Removing %s...' % name)
-        if path.islink(package_dir):
-            os.remove(package_dir)
-        else:
-            shutil.rmtree(package_dir)
-    else:
-        console.error('No package %s' % name)
+    for name in args:
+        package_dir = path.join(env.package_dir, name)
+        if path.exists(package_dir):
+            console.quiet('Removing %s...' % name)
+            if path.islink(package_dir):
+                os.remove(package_dir)
+            else:
+                shutil.rmtree(package_dir)
+
+        ciprcfg.remove_package(name)
+
 
 def _package_info(package):
     version = None
-    type = 'file'
+    type = 'dir'
     if package.startswith('git'):
         if '@' in package:
             package, version = package.split('@', 1)
@@ -74,78 +74,93 @@ def _package_info(package):
     return package, name, version, type
 
 
-@app.command(opts=(app.opt('-u', '--upgrade', action='store_true', dest='upgrade', help='Force upgrade of installed package')))
+@app.command(
+    opts=(app.opt('-u', '--upgrade', action='store_true', dest='upgrade', help='Force upgrade of installed package')),
+    usage='[options] [PACKAGE] [PACKAGE...]'
+)
 def install(args, console, env, ciprcfg, opts):
     """
     Install a package from github and make it available for use.
     """
-    assert len(args) == 1
-    package, name, version, type = _package_info(args[0])
-
-    if not path.exists(env.package_dir):
-        os.makedirs(env.package_dir)
-
-    package_dir = path.join(env.package_dir, name)
-    pkg = Package(package_dir)
-
-    if path.exists(package_dir):
-        if opts.upgrade:
-            app.command.run(['uninstall', name])
+    if len(args) == 0:
+        # Is this a cipr project?
+        if ciprcfg.exists:
+            # Install all the packages for this project
+            console.quiet('Installing current project packages...')
+            for name, source in ciprcfg.packages.items():
+                if opts.upgrade:
+                    app.command.run(['install', '--upgrade', source])
+                else:
+                    app.command.run(['install', source])
         else:
-            if name not in ciprcfg.packages:
-                ciprcfg.add_package(pkg)
-
-            console.quiet('Package %s already exists' % name)
-            return
-
-    console.quiet('Installing %s...' % name)
-
-
-    if type == 'git':        
-        tmpdir = tempfile.mkdtemp(prefix='cipr')
-        clom.git.clone(package, tmpdir).shell.execute()
-
-        if version:
-            cmd = AND(clom.cd(tmpdir), clom.git.checkout(version))
-            cmd.shell.execute()
-
-        package_json = path.join(tmpdir, 'package.json')
-        if path.exists(package_json):
-            # Looks like a cipr package, copy directly
-            shutil.move(tmpdir, package_dir)
-        else:
-            # Not a cipr package, sandbox in sub-directory
-            shutil.move(tmpdir, path.join(package_dir, name))
-
-        console.quiet('`%s` installed from git repo to `%s`' % (name, package_dir))
-
-    elif path.exists(package):
-        # Local        
-        os.symlink(package, package_dir)
-    else:
-        console.error('Package `%s` type not recognized' % package)
+            console.error('No cipr project or package found.')
         return
-    
-    ciprcfg.add_package(pkg)
+    else:
+        for source in args:
+            package, name, version, type = _package_info(source)
 
-    if pkg.dependencies:
-        console.quiet('Installing dependancies...')
-        for name, require in pkg.dependencies.items():
-            if opts.upgrade:
-                app.command.run(['install', '--upgrade', require])
+            if not path.exists(env.package_dir):
+                os.makedirs(env.package_dir)
+
+            package_dir = path.join(env.package_dir, name)
+
+            if path.exists(package_dir):
+                if opts.upgrade:
+                    app.command.run(['uninstall', name])
+                else:
+                    console.quiet('Package %s already exists. Use --upgrade to force a re-install.' % name)
+                    return
+
+            console.quiet('Installing %s...' % name)
+
+
+            if type == 'git':        
+                tmpdir = tempfile.mkdtemp(prefix='cipr')
+                clom.git.clone(package, tmpdir).shell.execute()
+
+                if version:
+                    cmd = AND(clom.cd(tmpdir), clom.git.checkout(version))
+                    cmd.shell.execute()
+
+                package_json = path.join(tmpdir, 'package.json')
+                if path.exists(package_json):
+                    # Looks like a cipr package, copy directly
+                    shutil.move(tmpdir, package_dir)
+                else:
+                    # Not a cipr package, sandbox in sub-directory
+                    shutil.move(tmpdir, path.join(package_dir, name))
+
+                console.quiet('`%s` installed from git repo to `%s`' % (name, package_dir))
+
+            elif path.exists(package):
+                # Local        
+                os.symlink(package, package_dir)
             else:
-                app.command.run(['install', require])
+                console.error('Package `%s` type not recognized' % package)
+                return
+            
+            pkg = Package(package_dir, source)
+            ciprcfg.add_package(pkg)
+
+            if pkg.dependencies:
+                console.quiet('Installing dependancies...')
+                for name, require in pkg.dependencies.items():
+                    if opts.upgrade:
+                        app.command.run(['install', '--upgrade', require])
+                    else:
+                        app.command.run(['install', require])
 
 @app.command(opts=(app.opt('-l', '--long', action='store_true', dest='long_details', help='List details about package')))
 def packages(ciprcfg, env, opts, console):
     """
     List installed packages for this project
     """
-    for name in ciprcfg.packages:
+    for name, source in ciprcfg.packages.items():
         console.normal('- %s' % name)
 
         if opts.long_details:
             console.normal('  - directory: %s' % path.join(env.package_dir, name))        
+            console.normal('  - source: %s' % source)        
             
     
 @app.command
@@ -178,7 +193,7 @@ def build(env, ciprcfg, console):
     for src, dst in util.sync_dir_to(env.project_directory, env.build_dir, exclude=['.cipr', '.git']):
         console.quiet('  %s -> %s' % (src, dst))
     
-    for package in ciprcfg.packages:
+    for package in ciprcfg.packages.keys():
         for src, dst in util.sync_lua_dir_to(path.join(env.package_dir, package), env.build_dir, exclude=['.git'], include=['*.lua']):
             console.quiet('  %s -> %s' % (src, dst))        
     

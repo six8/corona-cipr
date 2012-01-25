@@ -3,10 +3,11 @@ import os
 import json
 
 class Package(object):    
-    def __init__(self, dir):
+    def __init__(self, dir, source):
         self._dir = dir
         self._packagesDir = path.dirname(dir)
         self.info = {}
+        self.source = source
 
         self.name = path.basename(self._dir)
 
@@ -22,8 +23,8 @@ class Package(object):
     @property
     def deploy_packages(self):
         return [
-            Package(path.join(self._packagesDir, name))
-                for name in self.dependencies.keys()
+            Package(path.join(self._packagesDir, name), source)
+                for name, source in self.dependencies.items()
         ]
 
     @property
@@ -32,7 +33,7 @@ class Package(object):
 
 class CiprCfg(object):
     """
-    Manages a projects .ciprcfg file.
+    Manages a project's .ciprcfg file.
     """
     def __init__(self, ciprfile):
         self._filename = ciprfile
@@ -40,6 +41,10 @@ class CiprCfg(object):
         if path.exists(self._filename):
             with open(self._filename) as file:
                 self._data = json.load(file)
+
+    @property
+    def exists(self):
+        return path.exists(self._filename)
 
     def create(self):
         dir = path.dirname(self._filename)
@@ -60,15 +65,20 @@ class CiprCfg(object):
         """
         return self._data.get('packages', [])
 
+    def remove_package(self, name):
+        if name in self.packages:
+            del self.packages[name]
+            self._save()
+            
     def add_package(self, package):
         """
         Add a package to this project
         """
-        self._data.setdefault('packages', [])
-        if package.name not in self._data['packages']:
-            self._data['packages'].append(package.name)
+        self._data.setdefault('packages', {})
+        
+        self._data['packages'][package.name] = package.source
 
-            for package in package.deploy_packages:
-                self.add_package(package)
+        for package in package.deploy_packages:
+            self.add_package(package)
 
-            self._save()
+        self._save()
