@@ -59,6 +59,9 @@ def sync_dir_to(src_dir, dst_dir, exclude=None, include=None, ignore_existing=Fa
             continue
         else:
             yield (filename, dst)
+            dir = path.dirname(dst)
+            if not path.exists(dir):
+                os.makedirs(dir)
             shutil.copy2(src, dst)
 
 def sync_lua_dir_to(src_dir, dst_dir, exclude=None, include=None):
@@ -82,5 +85,8 @@ def sync_lua_dir_to(src_dir, dst_dir, exclude=None, include=None):
         dst = path.join(dst_dir, distname)
 
         yield (filename, dst)
+        dir = path.dirname(dst)
+        if not path.exists(dir):
+            os.makedirs(dir)
         
         shutil.copy2(src, dst)

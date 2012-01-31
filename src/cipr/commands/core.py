@@ -5,6 +5,7 @@ from clom import clom, AND
 import json
 import tempfile
 import shutil
+import re
 from glob import glob
 from cipr.commands.cfg import Package, CiprCfg
 from cipr.commands import env, util
@@ -70,8 +71,10 @@ def _package_info(package):
     else:
         package = path.abspath(package)
         name = path.basename(package)
+       
+    safe_name = re.sub(r'[^a-zA-Z0-1-_]', '_', name)    
 
-    return package, name, version, type
+    return package, safe_name, version, type
 
 
 @app.command(
@@ -101,7 +104,7 @@ def install(args, console, env, ciprcfg, opts):
 
             if not path.exists(env.package_dir):
                 os.makedirs(env.package_dir)
-
+            
             package_dir = path.join(env.package_dir, name)
 
             if path.exists(package_dir):
