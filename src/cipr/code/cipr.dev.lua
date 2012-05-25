@@ -32,8 +32,8 @@ local cipr_require = function (path)
 end
 _G.require = cipr_require
 
-cipr._packageDir = os.getenv('CIPR_PACKAGES')
-cipr._projectDir = os.getenv('CIPR_PROJECT')
+cipr._packageDir = os.getenv('CIPR_PACKAGES') or system.pathForFile(".cipr/packages", system.ResourceDirectory)
+cipr._projectDir = os.getenv('CIPR_PROJECT') or system.pathForFile(".", system.ResourceDirectory)
 
 local ciprcfg
 local file = io.open(cipr._projectDir .. '/.ciprcfg', 'r')
