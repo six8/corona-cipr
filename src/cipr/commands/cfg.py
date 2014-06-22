@@ -63,7 +63,7 @@ class CiprCfg(object):
         """
         Returns a list of packages available to this project
         """
-        return self._data.get('packages', [])
+        return self._data.get('packages', {})
 
     def remove_package(self, name):
         if name in self.packages:
@@ -82,3 +82,11 @@ class CiprCfg(object):
             self.add_package(package)
 
         self._save()
+
+
+    @property
+    def testflight(self):
+        """
+        Returns a list of packages available to this project
+        """
+        return self._data.get('testflight', {})

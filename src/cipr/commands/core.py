@@ -6,6 +6,9 @@ import json
 import tempfile
 import shutil
 import re
+import codecs
+import zipfile
+
 from glob import glob
 from cipr.commands.cfg import Package, CiprCfg
 from cipr.commands import env, util
@@ -173,12 +176,28 @@ def run(env):
     """
     os.putenv('CIPR_PACKAGES', env.package_dir)
     os.putenv('CIPR_PROJECT', env.project_directory)
-    cmd = clom['/Applications/CoronaSDK/Corona Terminal'](env.project_directory)
+
+    # `Corona Terminal` doesn't support spaces in filenames so we cd in and use '.'.
+
+    cmd = AND(
+        clom.cd(path.dirname(env.project_directory)), 
+        clom['/Applications/CoronaSDK/Corona Simulator.app/Contents/MacOS/Corona Simulator'](path.basename(env.project_directory))
+    )
 
     try:
         cmd.shell.execute()
     except KeyboardInterrupt:
         pass
+
+def _fix_lua_module_name(src, dst):
+    # name, ext = path.splitext(src)
+    # with codecs.open(dst, 'r', encoding='utf-8') as f:
+    #     content = f.read()
+    # with codecs.open(dst, 'w', encoding='utf-8') as f:
+    #     content = content.replace('class(...', "class('%s'" % name.replace('/', '.'))
+    #     content = content.replace('getLogger(...)', "getLogger('%s')" % name.replace('/', '.'))
+    #     f.write(content)
+    pass
 
 @app.command
 def build(env, ciprcfg, console):
@@ -193,16 +212,27 @@ def build(env, ciprcfg, console):
         
     os.makedirs(env.build_dir)
         
-    if not path.exists(env.dist_dir):
-        os.makedirs(env.dist_dir)
+    if path.exists(env.dist_dir):
+        shutil.rmtree(env.dist_dir)
 
-    for src, dst in util.sync_dir_to(env.project_directory, env.build_dir, exclude=['.cipr', '.git', 'build', 'dist']):
-        console.quiet('  %s -> %s' % (src, dst))
+    os.makedirs(env.dist_dir)
+
+    console.normal('Building in %s' % env.build_dir)
     
+    console.normal('Copy project files...')
+    for src, dst in util.sync_dir_to(env.project_directory, env.build_dir, exclude=['.cipr', '.git', 'build', 'dist', '.*']):
+        console.quiet('  %s -> %s' % (src, dst))
+        if src.endswith('.lua'):
+            _fix_lua_module_name(src, dst)
+
+    
+    console.normal('Copy cipr packages...')
     for package in ciprcfg.packages.keys():
         for src, dst in util.sync_lua_dir_to(path.join(env.package_dir, package), env.build_dir, exclude=['.git'], include=['*.lua']):
             console.quiet('  %s -> %s' % (src, dst))        
-    
+            if src.endswith('.lua'):
+                _fix_lua_module_name(src, dst)
+
     src = path.join(env.code_dir, 'cipr.lua')
     dst = path.join(env.build_dir, 'cipr.lua')
     shutil.copy(src, dst)
@@ -216,24 +246,40 @@ def build(env, ciprcfg, console):
     except KeyboardInterrupt:
         pass
         
+def _get_ipa(env):
+    filenames = glob(path.join(env.dist_dir, '*.app'))
+    filename, ext = path.splitext(path.basename(filenames[0]))
+    ipa_name = filename + '.ipa'
+    ipa_path = path.join(env.dist_dir, ipa_name)
+    app_path = path.join(env.dist_dir, filename + '.app')
+    return ipa_path, app_path
+
 @app.command 
 def packageipa(env, console):    
     """
     Package the built app as an ipa for distribution in iOS App Store
     """
-    filenames = glob(path.join(env.dist_dir, '*.app'))
-    filename, ext = path.splitext(path.basename(filenames[0]))
-    ipa_name = filename + '.ipa'
-    output_dir = path.dirname(env.dist_dir)
-    ipa_path = path.join(output_dir, ipa_name)
-    
+    ipa_path, app_path = _get_ipa(env)
+    output_dir = path.dirname(ipa_path)
+
     if path.exists(ipa_path):
         console.quiet('Removing %s' % ipa_path)
         os.remove(ipa_path)
         
-    cmd = AND(clom.cd(output_dir), clom.zip(r=ipa_name).with_args('Payload/%s.app' % filename))
-    cmd.shell.execute()
+    zf = zipfile.ZipFile(ipa_path, mode='w')
+    payload_dir = 'Payload'
 
+    for (dirpath, dirnames, filenames) in os.walk(app_path):
+        for filename in filenames:
+            filepath = path.join(dirpath, filename)
+            prefix = path.commonprefix([filepath, path.dirname(app_path)])
+            write_path = path.join(payload_dir, filepath[len(prefix) + 1:])
+            
+            console.quiet('Write %s' % write_path)
+            
+            zf.write(filepath, write_path)
+    
+    zf.close()    
 
     console.quiet('Packaged %s' % ipa_path)
 
@@ -257,4 +303,23 @@ def expanddotpaths(env, console):
 
             clom.git.mv(filepath, newfilename).shell.execute()
 
+@app.command(opts=(
+    app.opt('-n', '--notes', action='store', dest='notes', help='Notes for release')
+))
+def testflight(env, console, ciprcfg, opts):
+    api_token = ciprcfg.testflight['api_token']
+    team_token = ciprcfg.testflight['team_token']
 
+    ipa_path, app_path = _get_ipa(env)
+
+    console.quiet('Uploading %s to testflight' % path.basename(ipa_path))
+
+    clom.curl('http://testflightapp.com/api/builds.json', 
+        '-F', 'file=@%s' % ipa_path,
+        '-F', 'distribution_lists=First',
+        '-F', 'api_token=%s' % api_token,
+        '-F', 'team_token=%s' % team_token,
+        '-F', 'notes=%s' % opts.notes, 
+        '-F', 'notify=True',
+        '-F', 'replace=True'
+    ).shell.execute()

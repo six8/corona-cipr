@@ -57,12 +57,12 @@ def sync_dir_to(src_dir, dst_dir, exclude=None, include=None, ignore_existing=Fa
                 
         if ignore_existing and path.exists(dst):
             continue
-        else:
-            yield (filename, dst)
+        else:            
             dir = path.dirname(dst)
             if not path.exists(dir):
                 os.makedirs(dir)
             shutil.copy2(src, dst)
+            yield (filename, dst)
 
 def sync_lua_dir_to(src_dir, dst_dir, exclude=None, include=None):
     if not path.exists(dst_dir):
@@ -79,14 +79,16 @@ def sync_lua_dir_to(src_dir, dst_dir, exclude=None, include=None):
         if name.endswith('/init'):
             name = name[:-len('/init')]
             
-        distname = name.replace('/', '_').replace('.', '_') + ext
-        
+        # Corona now support sub-directories
+        #distname = name.replace('/', '_').replace('.', '_') + ext
+        distname = name + ext
+
         src = path.join(src_dir, filename)
         dst = path.join(dst_dir, distname)
-
-        yield (filename, dst)
+        
         dir = path.dirname(dst)
         if not path.exists(dir):
             os.makedirs(dir)
         
         shutil.copy2(src, dst)
+        yield (filename, dst)
