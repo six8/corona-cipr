@@ -14,6 +14,7 @@ from cipr.commands.cfg import Package, CiprCfg
 from cipr.commands import env, util
 from cipr.commands import app
 
+CORONA_SIMULATOR_PATH = '/Applications/Corona/Corona Simulator.app/Contents/MacOS/Corona Simulator'
 
 @app.command
 def init(ciprcfg, env, console):
@@ -181,7 +182,7 @@ def run(env):
 
     cmd = AND(
         clom.cd(path.dirname(env.project_directory)),
-        clom['/Applications/CoronaSDK/Corona Simulator.app/Contents/MacOS/Corona Simulator'](path.basename(env.project_directory))
+        clom[CORONA_SIMULATOR_PATH](path.basename(env.project_directory))
     )
 
     try:
@@ -253,7 +254,7 @@ def build(env, ciprcfg, console):
     dst = path.join(env.build_dir, 'cipr.lua')
     shutil.copy(src, dst)
 
-    cmd = AND(clom.cd(env.build_dir), clom['/Applications/CoronaSDK/Corona Terminal'](env.build_dir))
+    cmd = AND(clom.cd(env.build_dir), clom[CORONA_SIMULATOR_PATH](env.build_dir))
 
     console.normal('Be sure to output your app to %s' % env.dist_dir)
 

@@ -2,18 +2,18 @@ from os import path
 import os
 import shutil
 from fnmatch import fnmatch
-    
-def _get_file_list(root, child, exclude, include):    
+
+def _get_file_list(root, child, exclude, include):
     src_dir = root
     if child:
         src_dir = path.join(src_dir, child)
-        
+
     files = []
     for filename in os.listdir(src_dir):
         part = filename
         if child:
             part = path.join(child, filename)
-            
+
         src = path.join(root, part)
 
         skip = False
@@ -40,12 +40,12 @@ def _get_file_list(root, child, exclude, include):
             files.extend(_get_file_list(root, part, exclude=exclude, include=include))
         else:
             files.append(part)
-    
+
     return files
-        
+
 def get_file_list(root, exclude=None, include=None):
     return _get_file_list(root, child=None, exclude=exclude, include=include)
-    
+
 def sync_dir_to(src_dir, dst_dir, exclude=None, include=None, ignore_existing=False):
     if not path.exists(dst_dir):
         os.makedirs(dst_dir)
@@ -54,10 +54,10 @@ def sync_dir_to(src_dir, dst_dir, exclude=None, include=None, ignore_existing=Fa
     for filename in files_to_copy:
         src = path.join(src_dir, filename)
         dst = path.join(dst_dir, filename)
-                
+
         if ignore_existing and path.exists(dst):
             continue
-        else:            
+        else:
             dir = path.dirname(dst)
             if not path.exists(dir):
                 os.makedirs(dir)
@@ -72,23 +72,23 @@ def sync_lua_dir_to(src_dir, dst_dir, exclude=None, include=None):
         include = []
     if '*.lua' not in include:
         include.append('*.lua')
-        
+
     files_to_copy = get_file_list(src_dir, exclude=exclude, include=include)
     for filename in files_to_copy:
         name, ext = path.splitext(filename)
         if name.endswith('/init'):
             name = name[:-len('/init')]
-            
+
         # Corona now support sub-directories
         #distname = name.replace('/', '_').replace('.', '_') + ext
         distname = name + ext
 
         src = path.join(src_dir, filename)
         dst = path.join(dst_dir, distname)
-        
+
         dir = path.dirname(dst)
         if not path.exists(dir):
             os.makedirs(dir)
-        
+
         shutil.copy2(src, dst)
         yield (filename, dst)
